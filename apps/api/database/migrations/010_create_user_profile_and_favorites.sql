@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN mobile_number VARCHAR(10) NULL UNIQUE;
+CREATE TABLE IF NOT EXISTS user_favorites (user_id CHAR(36) NOT NULL,product_id CHAR(36) NOT NULL,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,product_id),CONSTRAINT favorites_user_fk FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,CONSTRAINT favorites_product_fk FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE);

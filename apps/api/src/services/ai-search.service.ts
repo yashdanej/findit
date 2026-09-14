@@ -1,5 +1,6 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { pipeline, RawImage } from "@huggingface/transformers";
+import { randomUUID } from "node:crypto";
 
 const collection = process.env.QDRANT_COLLECTION || "product_images";
 const qdrant = new QdrantClient({ url: process.env.QDRANT_URL || "http://qdrant:6333", checkCompatibility: false });
@@ -22,12 +23,28 @@ async function ensure() {
 export async function indexProductImage(productId: string, imageUrl: string) {
   await ensure();
   const vector = await embed(imageUrl);
-  await qdrant.upsert(collection, { wait: true, points: [{ id: productId, vector, payload: { productId, imageUrl } }] });
+  await qdrant.upsert(collection, { wait: true, points: [{ id: randomUUID(), vector, payload: { productId, imageUrl } }] });
 }
 
 export async function findSimilarProducts(image: string | Buffer) {
   await ensure();
   const vector = await embed(image);
-  const result: any = await qdrant.query(collection, { query: vector, limit: 12, with_payload: true });
-  return (result?.points || []).map((row: any) => ({ productId: String(row.payload?.productId || row.id), similarity: row.score }));
+  const result: any = await qdrant.query(collection, {
+    query: vector,
+    limit: 24,
+    score_threshold: 0.35,
+    with_payload: true,
+  });
+  const bestByProduct = new Map<string, { productId: string; similarity: number; matchType: string }>();
+  for (const row of result?.points || []) {
+    const productId = String(row.payload?.productId || row.id);
+    const similarity = Number(row.score || 0);
+    if (similarity < 0.35 || bestByProduct.has(productId)) continue;
+    bestByProduct.set(productId, {
+      productId,
+      similarity,
+      matchType: similarity >= 0.72 ? "STRONG_MATCH" : similarity >= 0.55 ? "SIMILAR_MATCH" : "CLOSEST_MATCH",
+    });
+  }
+  return [...bestByProduct.values()].sort((a, b) => b.similarity - a.similarity).slice(0, 12);
 }

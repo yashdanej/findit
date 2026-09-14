@@ -19,8 +19,8 @@ export const rawPool = mysql.createPool({
   multipleStatements: true,
 });
 export const pool = {
-  query: async (sql: string, values: any[] = []): Promise<{ rows: any[] }> => {
+  query: async (sql: string, values: any[] = []): Promise<{ rows: any[]; affectedRows?: number }> => {
     const [rows] = await rawPool.query(sql.replace(/\$\d+/g, "?"), values);
-    return { rows: Array.isArray(rows) ? rows : [] };
+    return { rows: Array.isArray(rows) ? rows : [], affectedRows: Array.isArray(rows) ? undefined : (rows as any).affectedRows };
   },
 };

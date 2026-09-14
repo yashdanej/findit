@@ -15,6 +15,8 @@ export const authService = {
   }) => {
     if (await sellerRepository.findByEmail(x.email))
       throw new HttpError(409, "Email is already registered.", "EMAIL_ALREADY_REGISTERED", { email: "This email is already registered." });
+    if (x.mobileNumber && (await sellerRepository.findByMobile(x.mobileNumber)))
+      throw new HttpError(409, "This mobile number is already registered to another seller.", "MOBILE_ALREADY_REGISTERED", { mobileNumber: "This mobile number is already registered. Use a different number or log in." });
     const seller = await sellerRepository.create(
       x.email,
       x.mobileNumber || null,
@@ -26,7 +28,7 @@ export const authService = {
   login: async (email: string, password: string) => {
     const seller = await sellerRepository.findByEmail(email);
     if (!seller || !(await bcrypt.compare(password, seller.password_hash)))
-      throw new HttpError(401, "Invalid mobile number or password.", "INVALID_CREDENTIALS");
+      throw new HttpError(401, "Invalid email or password.", "INVALID_CREDENTIALS");
     return {
       seller: {
         id: seller.id,
