@@ -13,14 +13,14 @@ export async function claimCoupon(productId: string, userId: string) {
   if (!product) throw new HttpError(404, "This product is not available for a FindIt coupon.", "PRODUCT_NOT_AVAILABLE");
   const originalPrice = Number(product.base_price);
   if (!Number.isFinite(originalPrice) || originalPrice <= 0) throw new HttpError(422, "This product does not have a verified price yet.", "PRODUCT_PRICE_UNAVAILABLE");
-  const existing = (await pool.query("SELECT id FROM coupon_claims WHERE user_id=? AND product_id=? AND status IN ('CLAIMED','VERIFIED') AND expires_at>NOW()", [userId, productId])).rows[0];
+  const existing = (await pool.query("SELECT id FROM coupon_claims WHERE user_id=? AND product_id=? AND status='CLAIMED'", [userId, productId])).rows[0];
   if (existing) throw new HttpError(409, "You already have an active coupon for this product.", "COUPON_ALREADY_CLAIMED");
   const id = randomUUID();
   const couponCode = code();
   const discountAmount = Math.round(originalPrice * discountPercent) / 100;
   const finalPrice = Math.round((originalPrice - discountAmount) * 100) / 100;
   await pool.query(`INSERT INTO coupon_claims (id,code,user_id,seller_id,product_id,discount_percent,original_price,discount_amount,final_price,expires_at)
-    VALUES (?,?,?,?,?,?,?,?,?,DATE_ADD(NOW(), INTERVAL 24 HOUR))`, [id, couponCode, userId, product.seller_id, productId, discountPercent, originalPrice, discountAmount, finalPrice]);
+    VALUES (?,?,?,?,?,?,?,?,?,NULL)`, [id, couponCode, userId, product.seller_id, productId, discountPercent, originalPrice, discountAmount, finalPrice]);
   try {
     await sendCouponClaimEmail({ to: product.email, code: couponCode, seller: product.shop_name, product: product.title, claimedAt: new Date() });
   } catch (error) {
@@ -28,7 +28,7 @@ export async function claimCoupon(productId: string, userId: string) {
     console.error("Coupon email failed", { claimId: id, error });
     throw new HttpError(502, "We could not send your coupon email, so the coupon was not created.", "COUPON_EMAIL_FAILED");
   }
-  return { id, code: couponCode, discountPercent, originalPrice, discountAmount, finalPrice, expiresIn: "24 hours" };
+  return { id, code: couponCode, discountPercent, originalPrice, discountAmount, finalPrice, expiresIn: null };
 }
 
 export async function verifyCoupon(couponCode: string, sellerId: string) {
@@ -48,4 +48,31 @@ export async function redeemCoupon(couponCode: string, sellerId: string) {
   const result = await pool.query("UPDATE coupon_claims SET status='REDEEMED',redeemed_at=NOW() WHERE code=? AND seller_id=? AND status='VERIFIED'", [couponCode.trim().toUpperCase(), sellerId]);
   if (!result.affectedRows) throw new HttpError(404, "Verified coupon not found or has already been redeemed.", "COUPON_NOT_FOUND");
   return { success: true };
+}
+
+export async function listSellerCoupons(sellerId: string) {
+  const rows = (await pool.query(`SELECT c.code,c.status,c.verification_status,c.claimed_at,c.verified_at,
+      p.id product_id,p.title product_title,u.full_name,u.email
+    FROM coupon_claims c
+    JOIN products p ON p.id=c.product_id
+    LEFT JOIN users u ON u.id=c.user_id
+    WHERE c.seller_id=?
+    ORDER BY c.claimed_at DESC`, [sellerId])).rows;
+  return rows.map((row: any) => ({
+    ...row,
+    status: row.status === "VERIFIED" || row.status === "REDEEMED" ? "PURCHASED / VERIFIED" : "CLAIMED / NOT PURCHASED",
+  }));
+}
+
+export async function listUserCoupons(userId: string) {
+  return (await pool.query(`SELECT c.id,c.code,c.discount_percent,c.original_price,c.discount_amount,c.final_price,
+      c.status,c.verification_status,c.claimed_at,c.verified_at,c.redeemed_at,c.expires_at,
+      p.id product_id,p.title product_title,MIN(pm.url) image_url,s.shop_name
+    FROM coupon_claims c
+    JOIN products p ON p.id=c.product_id
+    JOIN sellers s ON s.id=c.seller_id
+    LEFT JOIN product_media pm ON pm.product_id=p.id
+    WHERE c.user_id=?
+    GROUP BY c.id,p.id,s.id
+    ORDER BY c.claimed_at DESC`, [userId])).rows;
 }

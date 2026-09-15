@@ -1,41 +1,1021 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { api, getApiError } from "./api";
 import { useToast } from "../components/Toast";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import "./states.css";
 
 const authed = () => Boolean(localStorage.getItem("findit_seller_token"));
-function showError(toast: ReturnType<typeof useToast>, error: unknown, fallback: string) {
+function showError(
+  toast: ReturnType<typeof useToast>,
+  error: unknown,
+  fallback: string,
+) {
   const result = getApiError(error, fallback);
   const messages = Object.values(result.errors);
-  if (messages.length) messages.forEach((message) => toast.show(String(message), "error"));
+  if (messages.length)
+    messages.forEach((message) => toast.show(String(message), "error"));
   else toast.show(result.message, "error");
 }
 
 function Auth({ login = false }: { login?: boolean }) {
-  const navigate = useNavigate(); const toast = useToast();
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<any>();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<any>();
   const submit = async (values: any) => {
     try {
-      const { data } = await api.post(login ? "/auth/login" : "/auth/register", { ...values, email: values.email.trim().toLowerCase(), mobileNumber: values.mobileNumber || undefined });
-      localStorage.setItem("findit_seller_token", data.token); toast.show(login ? "Welcome back." : "Account created."); navigate("/seller/dashboard");
-    } catch (error) { showError(toast, error, "Unable to continue."); }
+      const { data } = await api.post(
+        login ? "/auth/login" : "/auth/register",
+        {
+          ...values,
+          email: values.email.trim().toLowerCase(),
+          mobileNumber: values.mobileNumber || undefined,
+        },
+      );
+      localStorage.setItem("findit_seller_token", data.token);
+      toast.show(login ? "Welcome back." : "Account created.");
+      navigate("/seller/dashboard");
+    } catch (error) {
+      showError(toast, error, "Unable to continue.");
+    }
   };
-  return <main className="auth-shell"><section className="auth-panel"><span className="eyebrow">SELLER PORTAL</span><h1>Grow your Surat textile business.</h1><p>Put your catalogue in front of local buyers looking for exactly what you sell.</p><div className="auth-perks"><span>✓ Create your digital shop</span><span>✓ Upload products from your phone</span><span>✓ Get reviewed before going live</span></div></section><section className="auth-card"><Link className="brand" to="/seller/login">findit<span>surat</span></Link><h2>{login ? "Welcome back" : "Start your seller journey"}</h2><p>{login ? "Log in to manage your shop and products." : "Create an account with your email address."}</p><form onSubmit={handleSubmit(submit)} noValidate><label>Email address<input type="email" placeholder="you@example.com" {...register("email", { required: "Email is required" })} />{errors.email && <small>{String(errors.email.message)}</small>}</label>{!login && <label>Mobile number <span>optional</span><input inputMode="numeric" maxLength={10} placeholder="10 digit mobile number" {...register("mobileNumber", { pattern: { value: /^[6-9]\d{9}$/, message: "Enter a valid 10 digit mobile number." } })} />{errors.mobileNumber && <small>{String(errors.mobileNumber.message)}</small>}</label>}{!login && <label>Shop name<input placeholder="e.g. Shree Textiles" {...register("shopName", { required: "Shop name is required" })} />{errors.shopName && <small>{String(errors.shopName.message)}</small>}</label>}<label>Password<input type="password" placeholder="At least 8 characters" {...register("password", { required: "Password is required", minLength: { value: 8, message: "Use at least 8 characters." } })} />{errors.password && <small>{String(errors.password.message)}</small>}</label><button className="primary wide" disabled={isSubmitting}>{isSubmitting ? "Please wait..." : login ? "Log in" : "Create account"}</button></form><p className="switch">{login ? "New to FindIt? " : "Already registered? "}<Link to={login ? "/seller/register" : "/seller/login"}>{login ? "Create account" : "Log in"}</Link></p></section></main>;
+  return (
+    <main className="auth-shell">
+      <section className="auth-panel">
+        <span className="eyebrow">SELLER PORTAL</span>
+        <h1>Grow your Surat textile business.</h1>
+        <p>
+          Put your catalogue in front of local buyers looking for exactly what
+          you sell.
+        </p>
+        <div className="auth-perks">
+          <span>✓ Create your digital shop</span>
+          <span>✓ Upload products from your phone</span>
+          <span>✓ Get reviewed before going live</span>
+        </div>
+      </section>
+      <section className="auth-card">
+        <Link className="brand" to="/seller/login">
+          findit<span>surat</span>
+        </Link>
+        <h2>{login ? "Welcome back" : "Start your seller journey"}</h2>
+        <p>
+          {login
+            ? "Log in to manage your shop and products."
+            : "Create an account with your email address."}
+        </p>
+        <form onSubmit={handleSubmit(submit)} noValidate>
+          <label>
+            Email address
+            <input
+              type="email"
+              placeholder="you@example.com"
+              {...register("email", { required: "Email is required" })}
+            />
+            {errors.email && <small>{String(errors.email.message)}</small>}
+          </label>
+          {!login && (
+            <label>
+              Mobile number <span>optional</span>
+              <input
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="10 digit mobile number"
+                {...register("mobileNumber", {
+                  pattern: {
+                    value: /^[6-9]\d{9}$/,
+                    message: "Enter a valid 10 digit mobile number.",
+                  },
+                })}
+              />
+              {errors.mobileNumber && (
+                <small>{String(errors.mobileNumber.message)}</small>
+              )}
+            </label>
+          )}
+          {!login && (
+            <label>
+              Shop name
+              <input
+                placeholder="e.g. Shree Textiles"
+                {...register("shopName", { required: "Shop name is required" })}
+              />
+              {errors.shopName && (
+                <small>{String(errors.shopName.message)}</small>
+              )}
+            </label>
+          )}
+          <label>
+            Password
+            <input
+              type="password"
+              placeholder="At least 8 characters"
+              {...register("password", {
+                required: "Password is required",
+                minLength: { value: 8, message: "Use at least 8 characters." },
+              })}
+            />
+            {errors.password && (
+              <small>{String(errors.password.message)}</small>
+            )}
+          </label>
+          <button className="primary wide" disabled={isSubmitting}>
+            {isSubmitting
+              ? "Please wait..."
+              : login
+                ? "Log in"
+                : "Create account"}
+          </button>
+        </form>
+        <p className="switch">
+          {login ? "New to FindIt? " : "Already registered? "}
+          <Link to={login ? "/seller/register" : "/seller/login"}>
+            {login ? "Create account" : "Log in"}
+          </Link>
+        </p>
+      </section>
+    </main>
+  );
 }
 
-function Layout({ children }: { children: ReactNode }) { const navigate = useNavigate(); return <div className="seller-app"><aside className="sidebar"><Link className="brand inverse" to="/seller/dashboard">findit<span>surat</span></Link><nav><Link to="/seller/dashboard">Overview</Link><Link to="/seller/shop">My shop</Link><Link to="/seller/products">Products</Link><Link to="/seller/coupons">Coupons</Link></nav><button className="logout" onClick={() => { localStorage.removeItem("findit_seller_token"); navigate("/seller/login"); }}>Log out</button></aside><header className="mobile-header"><Link className="brand" to="/seller/dashboard">findit<span>surat</span></Link><Link to="/seller/products">Products</Link></header><main className="seller-main">{children}</main></div>; }
-function Dashboard() { const toast = useToast(); const [days, setDays] = useState(30); const [data, setData] = useState<any>(); const [loading, setLoading] = useState(true); useEffect(() => { setLoading(true); api.get(`/seller/dashboard?days=${days}`).then(({ data: response }) => setData(response.data)).catch((error) => showError(toast, error, "Could not load dashboard analytics.")).finally(() => setLoading(false)); }, [days]); return <Layout><div className="page-heading"><div><span className="eyebrow">OVERVIEW</span><h1>Your business at a glance</h1><p>Live catalogue and FindIt coupon activity from your shop.</p></div><Link className="primary" to="/seller/products/new">+ Add product</Link></div><div className="dashboard-toolbar"><span>Analytics period</span>{[7,30,90].map((period) => <button key={period} className={days === period ? "period active" : "period"} onClick={() => setDays(period)}>{period} days</button>)}</div>{loading ? <p>Loading dashboard analytics...</p> : <><div className="metric-grid">{[[data.metrics.totalProducts, "Total products"], [data.metrics.activeProducts, "Active products"], [data.metrics.couponClaims, "Coupon claims"], [data.metrics.couponVerifications, "Coupon verifications"]].map(([value, label]) => <article className="metric" key={label}><strong>{value}</strong><span>{label}</span></article>)}</div><section className="chart-panel"><div className="section-heading"><div><span className="eyebrow">COUPON ACTIVITY</span><h2>Claims and verifications</h2></div></div>{data.trend.length ? <ResponsiveContainer width="100%" height={280}><BarChart data={data.trend}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" /><YAxis allowDecimals={false} /><Tooltip /><Bar dataKey="claims" fill="#e97831" name="Claims" radius={[4,4,0,0]} /><Bar dataKey="verified" fill="#152744" name="Verified" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer> : <div className="empty">No coupon activity in this period.</div>}</section></>}</Layout>; }
-function Coupons() { const toast = useToast(); const [coupon, setCoupon] = useState(""); const [result, setResult] = useState<any>(); const [busy, setBusy] = useState(false); const verify = async (event: React.FormEvent) => { event.preventDefault(); setBusy(true); setResult(undefined); try { const response = await api.post("/seller/coupons/verify", { coupon }); setResult(response.data.data); toast.show("Coupon verified. Apply the displayed discount before redeeming."); } catch (error) { showError(toast, error, "Could not verify coupon."); } finally { setBusy(false); } }; const redeem = async () => { try { await api.post("/seller/coupons/redeem", { coupon }); toast.show("Coupon redeemed successfully."); setResult({ ...result, status: "REDEEMED" }); } catch (error) { showError(toast, error, "Could not redeem coupon."); } }; return <Layout><div className="form-wrap"><span className="eyebrow">FINDIT COUPONS</span><h1>Verify a website coupon</h1><p className="lead">Confirm the code belongs to your shop before accepting the 10% discount.</p><form className="modern-form" onSubmit={verify}><label>Coupon code<input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder="FINDIT-..." required /></label><button className="primary" disabled={busy}>{busy ? "Verifying coupon..." : "Verify coupon"}</button></form>{result && <section className="form-section"><h2>Verified coupon</h2><p><b>Customer:</b> {result.full_name || "FindIt customer"}</p><p><b>Product:</b> {result.product_title}</p><p><b>Discount:</b> {result.discount_percent}%</p><p><b>Original price:</b> ₹{result.original_price}</p><p><b>Final price:</b> ₹{result.final_price}</p><p><b>Status:</b> {result.status}</p>{result.status === "VERIFIED" && <button className="primary" onClick={redeem}>Redeem coupon</button>}</section>}</div></Layout>; }
-function Shop() { const toast = useToast(); const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<any>(); const [media, setMedia] = useState<any[]>([]); const [uploading, setUploading] = useState(""); useEffect(() => { api.get("/seller/me").then(({ data }) => { const seller = data.seller; reset({ shopName: seller.shop_name, addressLine: seller.address_line || "", area: seller.area || "", city: seller.city || "Surat", state: seller.state || "Gujarat", pincode: seller.pincode || "", locationUrl: seller.location_url || "" }); setMedia(data.media || []); }).catch((error) => showError(toast, error, "Could not load saved shop details.")); }, [reset]); const save = async (values: any) => { try { await api.put("/seller/shop", values); toast.show("Your shop details have been saved."); } catch (error) { showError(toast, error, "Please check the shop details shown in the form."); } }; const upload = async (type: "PROFILE" | "BANNER", file: File | undefined) => { if (!file) return; setUploading(type); try { const body = new FormData(); body.append("image", file); const response = await api.post(`/seller/shop/media/${type}`, body); setMedia((current) => [...current.filter((item) => item.media_type !== type), response.data.media]); toast.show(type === "PROFILE" ? "Shop profile image updated." : "Shop banner updated."); } catch (error) { showError(toast, error, "The shop image could not be uploaded. Check the file type and size."); } finally { setUploading(""); } }; return <Layout><div className="form-wrap"><span className="eyebrow">MY SHOP</span><h1>Tell buyers where to find you</h1><p className="lead">Saved details are loaded automatically when you return.</p><form className="modern-form" onSubmit={handleSubmit(save)}><div className="form-section"><h2>Shop details</h2><label>Shop name<input {...register("shopName", { required: "Shop name is required." })} /></label><label>Address line<input {...register("addressLine", { required: "Address is required." })} /></label><div className="two-col"><label>Area<input {...register("area", { required: "Area is required." })} /></label><label>Pincode<input {...register("pincode", { required: "Pincode is required." })} /></label></div><div className="two-col"><label>City<input {...register("city", { required: "City is required." })} /></label><label>State<input {...register("state", { required: "State is required." })} /></label></div></div><div className="form-section map-section"><h2>Shop location</h2><label>Google Maps URL <span>optional</span><input placeholder="https://maps.google.com/..." {...register("locationUrl")} /></label></div><div className="form-section"><h2>Shop images</h2><div className="shop-image-fields">{(["PROFILE", "BANNER"] as const).map((type) => { const item = media.find((entry) => entry.media_type === type); return <label key={type}>{type === "PROFILE" ? "Shop profile image" : "Shop banner"}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void upload(type, event.target.files?.[0])} />{item && <img className={type === "PROFILE" ? "shop-profile-preview" : "shop-banner-preview"} src={item.url} alt={`${type.toLowerCase()} preview`} />}{uploading === type && <small>Uploading image...</small>}</label>; })}</div></div><button className="primary" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save shop details"}</button></form></div></Layout>; }
+function Layout({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  return (
+    <div className="seller-app">
+      <aside className="sidebar">
+        <Link className="brand inverse" to="/seller/dashboard">
+          findit<span>surat</span>
+        </Link>
+        <nav>
+          <Link to="/seller/dashboard">Overview</Link>
+          <Link to="/seller/shop">My shop</Link>
+          <Link to="/seller/products">Products</Link>
+          <Link to="/seller/coupons">Coupons</Link>
+        </nav>
+        <button
+          className="logout"
+          onClick={() => {
+            localStorage.removeItem("findit_seller_token");
+            navigate("/seller/login");
+          }}
+        >
+          Log out
+        </button>
+      </aside>
+      <header className="mobile-header">
+        <Link className="brand" to="/seller/dashboard">
+          findit<span>surat</span>
+        </Link>
+        <Link to="/seller/products">Products</Link>
+      </header>
+      <main className="seller-main">{children}</main>
+    </div>
+  );
+}
+function Dashboard() {
+  const toast = useToast();
+  const [days, setDays] = useState(30);
+  const [data, setData] = useState<any>();
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    api
+      .get(`/seller/dashboard?days=${days}`)
+      .then(({ data: response }) => setData(response.data))
+      .catch((error) =>
+        showError(toast, error, "Could not load dashboard analytics."),
+      )
+      .finally(() => setLoading(false));
+  }, [days]);
+  return (
+    <Layout>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">OVERVIEW</span>
+          <h1>Your business at a glance</h1>
+          <p>Live catalogue and FindIt coupon activity from your shop.</p>
+        </div>
+        <Link className="primary" to="/seller/products/new">
+          + Add product
+        </Link>
+      </div>
+      <div className="dashboard-toolbar">
+        <span>Analytics period</span>
+        {[7, 30, 90].map((period) => (
+          <button
+            key={period}
+            className={days === period ? "period active" : "period"}
+            onClick={() => setDays(period)}
+          >
+            {period} days
+          </button>
+        ))}
+      </div>
+      {loading ? (
+        <p>Loading dashboard analytics...</p>
+      ) : (
+        <>
+          <div className="metric-grid">
+            {[
+              [data.metrics.totalProducts, "Total products"],
+              [data.metrics.activeProducts, "Active products"],
+              [data.metrics.couponClaims, "Coupon claims"],
+              [data.metrics.couponVerifications, "Coupon verifications"],
+            ].map(([value, label]) => (
+              <article className="metric" key={label}>
+                <strong>{value}</strong>
+                <span>{label}</span>
+              </article>
+            ))}
+          </div>
+          <section className="chart-panel">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">COUPON ACTIVITY</span>
+                <h2>Claims and verifications</h2>
+              </div>
+            </div>
+            {data.trend.length ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={data.trend}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Bar
+                    dataKey="claims"
+                    fill="#e97831"
+                    name="Claims"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="verified"
+                    fill="#152744"
+                    name="Verified"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="empty">No coupon activity in this period.</div>
+            )}
+          </section>
+        </>
+      )}
+    </Layout>
+  );
+}
+function Coupons() {
+  const toast = useToast();
+  const [coupon, setCoupon] = useState("");
+  const [result, setResult] = useState<any>();
+  const [busy, setBusy] = useState(false);
+  const verify = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setResult(undefined);
+    try {
+      const response = await api.post("/seller/coupons/verify", { coupon });
+      setResult(response.data.data);
+      toast.show(
+        "Coupon verified. Apply the displayed discount before redeeming.",
+      );
+    } catch (error) {
+      showError(toast, error, "Could not verify coupon.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const redeem = async () => {
+    try {
+      await api.post("/seller/coupons/redeem", { coupon });
+      toast.show("Coupon redeemed successfully.");
+      setResult({ ...result, status: "REDEEMED" });
+    } catch (error) {
+      showError(toast, error, "Could not redeem coupon.");
+    }
+  };
+  return (
+    <Layout>
+      <div className="form-wrap">
+        <span className="eyebrow">FINDIT COUPONS</span>
+        <h1>Verify a website coupon</h1>
+        <p className="lead">
+          Confirm the code belongs to your shop before accepting the 10%
+          discount.
+        </p>
+        <form className="modern-form" onSubmit={verify}>
+          <label>
+            Coupon code
+            <input
+              value={coupon}
+              onChange={(event) => setCoupon(event.target.value)}
+              placeholder="FINDIT-..."
+              required
+            />
+          </label>
+          <button className="primary" disabled={busy}>
+            {busy ? "Verifying coupon..." : "Verify coupon"}
+          </button>
+        </form>
+        {result && (
+          <section className="form-section">
+            <h2>Verified coupon</h2>
+            <p>
+              <b>Customer:</b> {result.full_name || "FindIt customer"}
+            </p>
+            <p>
+              <b>Product:</b> {result.product_title}
+            </p>
+            <p>
+              <b>Discount:</b> {result.discount_percent}%
+            </p>
+            <p>
+              <b>Original price:</b> ₹{result.original_price}
+            </p>
+            <p>
+              <b>Final price:</b> ₹{result.final_price}
+            </p>
+            <p>
+              <b>Status:</b> {result.status}
+            </p>
+            {result.status === "VERIFIED" && (
+              <button className="primary" onClick={redeem}>
+                Redeem coupon
+              </button>
+            )}
+          </section>
+        )}
+      </div>
+    </Layout>
+  );
+}
+function Shop() {
+  const toast = useToast();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<any>();
+  const [media, setMedia] = useState<any[]>([]);
+  const [uploading, setUploading] = useState("");
+  useEffect(() => {
+    api
+      .get("/seller/me")
+      .then(({ data }) => {
+        const seller = data.seller;
+        reset({
+          shopName: seller.shop_name,
+          addressLine: seller.address_line || "",
+          area: seller.area || "",
+          city: seller.city || "Surat",
+          state: seller.state || "Gujarat",
+          pincode: seller.pincode || "",
+          locationUrl: seller.location_url || "",
+        });
+        setMedia(data.media || []);
+      })
+      .catch((error) =>
+        showError(toast, error, "Could not load saved shop details."),
+      );
+  }, [reset]);
+  const save = async (values: any) => {
+    try {
+      await api.put("/seller/shop", values);
+      toast.show("Your shop details have been saved.");
+    } catch (error) {
+      showError(
+        toast,
+        error,
+        "Please check the shop details shown in the form.",
+      );
+    }
+  };
+  const upload = async (type: "PROFILE" | "BANNER", file: File | undefined) => {
+    if (!file) return;
+    setUploading(type);
+    try {
+      const body = new FormData();
+      body.append("image", file);
+      const response = await api.post(`/seller/shop/media/${type}`, body);
+      setMedia((current) => [
+        ...current.filter((item) => item.media_type !== type),
+        response.data.media,
+      ]);
+      toast.show(
+        type === "PROFILE"
+          ? "Shop profile image updated."
+          : "Shop banner updated.",
+      );
+    } catch (error) {
+      showError(
+        toast,
+        error,
+        "The shop image could not be uploaded. Check the file type and size.",
+      );
+    } finally {
+      setUploading("");
+    }
+  };
+  return (
+    <Layout>
+      <div className="form-wrap">
+        <span className="eyebrow">MY SHOP</span>
+        <h1>Tell buyers where to find you</h1>
+        <p className="lead">
+          Saved details are loaded automatically when you return.
+        </p>
+        <form className="modern-form" onSubmit={handleSubmit(save)}>
+          <div className="form-section">
+            <h2>Shop details</h2>
+            <label>
+              Shop name
+              <input
+                {...register("shopName", {
+                  required: "Shop name is required.",
+                })}
+              />
+            </label>
+            <label>
+              Address line
+              <input
+                {...register("addressLine", {
+                  required: "Address is required.",
+                })}
+              />
+            </label>
+            <div className="two-col">
+              <label>
+                Area
+                <input
+                  {...register("area", { required: "Area is required." })}
+                />
+              </label>
+              <label>
+                Pincode
+                <input
+                  {...register("pincode", { required: "Pincode is required." })}
+                />
+              </label>
+            </div>
+            <div className="two-col">
+              <label>
+                City
+                <input
+                  {...register("city", { required: "City is required." })}
+                />
+              </label>
+              <label>
+                State
+                <input
+                  {...register("state", { required: "State is required." })}
+                />
+              </label>
+            </div>
+          </div>
+          <div className="form-section map-section">
+            <h2>Shop location</h2>
+            <label>
+              Google Maps URL <span>optional</span>
+              <input
+                placeholder="https://maps.google.com/..."
+                {...register("locationUrl")}
+              />
+            </label>
+          </div>
+          <div className="form-section">
+            <h2>Shop images</h2>
+            <div className="shop-image-fields">
+              {(["PROFILE", "BANNER"] as const).map((type) => {
+                const item = media.find((entry) => entry.media_type === type);
+                return (
+                  <label key={type}>
+                    {type === "PROFILE" ? "Shop profile image" : "Shop banner"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) =>
+                        void upload(type, event.target.files?.[0])
+                      }
+                    />
+                    {item && (
+                      <img
+                        className={
+                          type === "PROFILE"
+                            ? "shop-profile-preview"
+                            : "shop-banner-preview"
+                        }
+                        src={item.url}
+                        alt={`${type.toLowerCase()} preview`}
+                      />
+                    )}
+                    {uploading === type && <small>Uploading image...</small>}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <button className="primary" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save shop details"}
+          </button>
+        </form>
+      </div>
+    </Layout>
+  );
+}
 
-function Products() { const [items, setItems] = useState<any[]>([]); const [loading, setLoading] = useState(true); const toast = useToast(); useEffect(() => { api.get("/seller/products?limit=50").then(({ data }) => setItems(data.data || [])).catch((error) => showError(toast, error, "Could not load products.")).finally(() => setLoading(false)); }, []); return <Layout><div className="page-heading"><div><span className="eyebrow">CATALOGUE</span><h1>Your products</h1><p>New products stay pending until reviewed.</p></div><Link className="primary" to="/seller/products/new">+ Add product</Link></div>{loading ? <p>Loading products...</p> : !items.length ? <section className="empty"><div>▦</div><h2>Your catalogue is waiting</h2><Link className="primary" to="/seller/products/new">Add your first product</Link></section> : <section className="product-list">{items.map((item) => <article className="product-row" key={item.id}><div className="media-placeholder">{item.media_count ? `${item.media_count} MEDIA` : "NEW"}</div><div><h2>{item.title}</h2><p>{item.description}</p><span className="status">{item.status}</span></div><Link className="primary compact-button" to={`/seller/products/${item.id}`}>Details</Link></article>)}</section>}</Layout>; }
+function Products() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+  useEffect(() => {
+    api
+      .get("/seller/products?limit=50")
+      .then(({ data }) => setItems(data.data || []))
+      .catch((error) => showError(toast, error, "Could not load products."))
+      .finally(() => setLoading(false));
+  }, []);
+  return (
+    <Layout>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">CATALOGUE</span>
+          <h1>Your products</h1>
+          <p>New products stay pending until reviewed.</p>
+        </div>
+        <Link className="primary" to="/seller/products/new">
+          + Add product
+        </Link>
+      </div>
+      {loading ? (
+        <p>Loading products...</p>
+      ) : !items.length ? (
+        <section className="empty">
+          <div>▦</div>
+          <h2>Your catalogue is waiting</h2>
+          <Link className="primary" to="/seller/products/new">
+            Add your first product
+          </Link>
+        </section>
+      ) : (
+        <section className="product-list">
+          {items.map((item) => (
+            <article className="product-row" key={item.id}>
+              <div className="media-placeholder">
+                {item.media_count ? `${item.media_count} MEDIA` : "NEW"}
+              </div>
+              <div>
+                <h2>{item.title}</h2>
+                <p>{item.description}</p>
+                <span className="status">{item.status}</span>
+              </div>
+              <Link
+                className="primary compact-button"
+                to={`/seller/products/${item.id}`}
+              >
+                Details
+              </Link>
+            </article>
+          ))}
+        </section>
+      )}
+    </Layout>
+  );
+}
 
-function ProductForm({ edit = false }: { edit?: boolean }) { const { id } = useParams(); const navigate = useNavigate(); const toast = useToast(); const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<any>(); const [files, setFiles] = useState<File[]>([]); const [media, setMedia] = useState<any[]>([]); const [tags, setTags] = useState<string[]>([]); const [tag, setTag] = useState(""); useEffect(() => { if (!edit || !id) return; Promise.all([api.get(`/seller/products/${id}`), api.get(`/seller/products/${id}/media`)]).then(([productResponse, mediaResponse]) => { const product = productResponse.data.product; reset({ title: product.title, description: product.description, seoTitle: product.seo_title || "", seoDescription: product.seo_description || "" }); setTags(Array.isArray(product.tags) ? product.tags : JSON.parse(product.tags || "[]")); setMedia(mediaResponse.data.media || []); }).catch((error) => showError(toast, error, "Could not load product details.")); }, [edit, id, reset]); const submit = async (values: any) => { try { const response = edit ? await api.put(`/seller/products/${id}`, { ...values, tags }) : await api.post("/seller/products", { ...values, tags }); const productId = id || response.data.product.id; if (files.length) { const form = new FormData(); files.forEach((file) => form.append("media", file)); await api.post(`/seller/products/${productId}/media`, form); } toast.show(edit ? "Product updated." : "Product submitted with media for review."); navigate(`/seller/products/${productId}`); } catch (error) { showError(toast, error, "Unable to save product. Check the product fields and media files."); } }; const choose = (list: FileList | null) => setFiles(Array.from(list || []).filter((file) => ["image/jpeg", "image/png", "image/webp", "video/mp4"].includes(file.type) && file.size <= 10485760).slice(0, 8)); const removeMedia = async (mediaId: string) => { try { await api.delete(`/seller/products/${id}/media/${mediaId}`); setMedia((items) => items.filter((item) => item.id !== mediaId)); toast.show("Media deleted."); } catch (error) { showError(toast, error, "Unable to delete media."); } }; return <Layout><div className="form-wrap"><Link className="back-link" to={edit ? `/seller/products/${id}` : "/seller/products"}>← Back</Link><span className="eyebrow">{edit ? "EDIT PRODUCT" : "NEW PRODUCT"}</span><h1>{edit ? "Update your product" : "Add a product buyers will notice"}</h1><form className="modern-form" onSubmit={handleSubmit(submit)}><div className="form-section"><h2>Product information</h2><label>Product title<input {...register("title", { required: "Product title is required." })} /></label><label>Description<textarea {...register("description", { required: "Product description is required.", minLength: { value: 10, message: "Description must be at least 10 characters." } })} /></label><label>Tags<div className="tag-input">{tags.map((item) => <span className="tag" key={item}>{item}<button type="button" onClick={() => setTags(tags.filter((value) => value !== item))}>×</button></span>)}<input value={tag} placeholder="Type a tag and press Enter" onChange={(event) => setTag(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); const value = tag.trim().toLowerCase(); if (value && !tags.includes(value)) setTags([...tags, value]); setTag(""); } }} /></div></label></div><div className="form-section"><h2>Product media</h2><label className="upload-zone"><input type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4" onChange={(event) => choose(event.target.files)} /><b>Tap to upload photos or video</b><span>JPG, PNG, WEBP or MP4 · 10 MB each</span></label>{(media.length > 0 || files.length > 0) && <div className="media-list">{media.map((item) => <div className="media-item" key={item.id}>{item.resource_type === "video" ? <video src={item.url} controls /> : <img src={item.url} alt="Product media" />}<button type="button" onClick={() => removeMedia(item.id)}>Delete</button></div>)}{files.map((file) => <div className="media-item" key={`${file.name}-${file.lastModified}`}>{file.type === "video/mp4" ? <video src={URL.createObjectURL(file)} controls /> : <img src={URL.createObjectURL(file)} alt={file.name} />}<small>{file.name}</small></div>)}</div>}<p>{files.length} new file(s) selected</p></div><button className="primary" disabled={isSubmitting}>{isSubmitting ? "Saving..." : edit ? "Save product" : "Submit for review"}</button></form></div></Layout>; }
+function ProductForm({ edit = false }: { edit?: boolean }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<any>({ defaultValues: { discountPercent: 0 } });
+  const [files, setFiles] = useState<File[]>([]);
+  const [media, setMedia] = useState<any[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tag, setTag] = useState("");
+  const price = Number(watch("basePrice") || 0);
+  const discount = Number(watch("discountPercent") || 0);
+  const sellingPrice = price > 0 ? price * (1 - discount / 100) : 0;
+  useEffect(() => {
+    if (!edit || !id) return;
+    Promise.all([
+      api.get(`/seller/products/${id}`),
+      api.get(`/seller/products/${id}/media`),
+    ])
+      .then(([productResponse, mediaResponse]) => {
+        const product = productResponse.data.product;
+        reset({
+          title: product.title,
+          description: product.description,
+          basePrice: product.base_price ?? "",
+          discountPercent: product.discount_percent ?? 0,
+          seoTitle: product.seo_title || "",
+          seoDescription: product.seo_description || "",
+        });
+        setTags(
+          Array.isArray(product.tags)
+            ? product.tags
+            : JSON.parse(product.tags || "[]"),
+        );
+        setMedia(mediaResponse.data.media || []);
+      })
+      .catch((error) =>
+        showError(toast, error, "Could not load product details."),
+      );
+  }, [edit, id, reset]);
+  const submit = async (values: any) => {
+    try {
+      const response = edit
+        ? await api.put(`/seller/products/${id}`, {
+            ...values,
+            basePrice:
+              values.basePrice === "" ? undefined : Number(values.basePrice),
+            discountPercent: Number(values.discountPercent || 0),
+            tags,
+          })
+        : await api.post("/seller/products", {
+            ...values,
+            basePrice:
+              values.basePrice === "" ? undefined : Number(values.basePrice),
+            discountPercent: Number(values.discountPercent || 0),
+            tags,
+          });
+      const productId = id || response.data.product.id;
+      if (files.length) {
+        const form = new FormData();
+        files.forEach((file) => form.append("media", file));
+        await api.post(`/seller/products/${productId}/media`, form);
+      }
+      toast.show(
+        edit ? "Product updated." : "Product submitted with media for review.",
+      );
+      navigate(`/seller/products/${productId}`);
+    } catch (error) {
+      showError(
+        toast,
+        error,
+        "Unable to save product. Check the product fields and media files.",
+      );
+    }
+  };
+  const choose = (list: FileList | null) =>
+    setFiles((current) => {
+      const additions = Array.from(list || []).filter(
+        (file) =>
+          ["image/jpeg", "image/png", "image/webp", "video/mp4"].includes(
+            file.type,
+          ) && file.size <= 10485760,
+      );
+      const keys = new Set(
+        current.map((file) => `${file.name}:${file.size}:${file.lastModified}`),
+      );
+      return [
+        ...current,
+        ...additions.filter(
+          (file) => !keys.has(`${file.name}:${file.size}:${file.lastModified}`),
+        ),
+      ].slice(0, 8);
+    });
+  const removeMedia = async (mediaId: string) => {
+    try {
+      await api.delete(`/seller/products/${id}/media/${mediaId}`);
+      setMedia((items) => items.filter((item) => item.id !== mediaId));
+      toast.show("Media deleted.");
+    } catch (error) {
+      showError(toast, error, "Unable to delete media.");
+    }
+  };
+  return (
+    <Layout>
+      <div className="form-wrap">
+        <Link
+          className="back-link"
+          to={edit ? `/seller/products/${id}` : "/seller/products"}
+        >
+          ← Back
+        </Link>
+        <span className="eyebrow">{edit ? "EDIT PRODUCT" : "NEW PRODUCT"}</span>
+        <h1>
+          {edit ? "Update your product" : "Add a product buyers will notice"}
+        </h1>
+        <form className="modern-form" onSubmit={handleSubmit(submit)}>
+          <div className="form-section">
+            <h2>Product information</h2>
+            <label>
+              Product title
+              <input
+                {...register("title", {
+                  required: "Product title is required.",
+                })}
+              />
+            </label>
+            <label>
+              Description
+              <textarea
+                {...register("description", {
+                  required: "Product description is required.",
+                  minLength: {
+                    value: 10,
+                    message: "Description must be at least 10 characters.",
+                  },
+                })}
+              />
+            </label>
+            <div className="two-col">
+              <label>
+                Price
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Original price"
+                  {...register("basePrice", {
+                    required: "Price is required.",
+                    min: {
+                      value: 0.01,
+                      message: "Price must be greater than zero.",
+                    },
+                  })}
+                />
+              </label>
+              <label>
+                Discount (%)
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="0"
+                  {...register("discountPercent", {
+                    required: "Discount is required.",
+                    min: { value: 0, message: "Discount cannot be negative." },
+                    max: {
+                      value: 100,
+                      message: "Discount cannot exceed 100%.",
+                    },
+                  })}
+                />
+              </label>
+            </div>
+            {price > 0 && (
+              <p className="price-summary">
+                <b>Original:</b> ₹{price.toLocaleString("en-IN")}{" "}
+                <b>Discount:</b> {discount}% <b>Selling:</b> ₹
+                {sellingPrice.toLocaleString("en-IN", {
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            )}
+            <label>
+              Tags
+              <div className="tag-input">
+                {tags.map((item) => (
+                  <span className="tag" key={item}>
+                    {item}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTags(tags.filter((value) => value !== item))
+                      }
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                <input
+                  value={tag}
+                  placeholder="Type a tag and press Enter"
+                  onChange={(event) => setTag(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      const value = tag.trim().toLowerCase();
+                      if (value && !tags.includes(value))
+                        setTags([...tags, value]);
+                      setTag("");
+                    }
+                  }}
+                />
+              </div>
+            </label>
+          </div>
+          <div className="form-section">
+            <h2>Product media</h2>
+            <label className="upload-zone">
+              <input
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp,video/mp4"
+                onChange={(event) => choose(event.target.files)}
+              />
+              <b>Tap to upload photos or video</b>
+              <span>JPG, PNG, WEBP or MP4 · 10 MB each</span>
+            </label>
+            {(media.length > 0 || files.length > 0) && (
+              <div className="media-list">
+                {media.map((item) => (
+                  <div className="media-item" key={item.id}>
+                    {item.resource_type === "video" ? (
+                      <video src={item.url} controls />
+                    ) : (
+                      <img src={item.url} alt="Product media" />
+                    )}
+                    <button type="button" onClick={() => removeMedia(item.id)}>
+                      Delete
+                    </button>
+                  </div>
+                ))}
+                {files.map((file) => (
+                  <div
+                    className="media-item"
+                    key={`${file.name}-${file.lastModified}`}
+                  >
+                    {file.type === "video/mp4" ? (
+                      <video src={URL.createObjectURL(file)} controls />
+                    ) : (
+                      <img src={URL.createObjectURL(file)} alt={file.name} />
+                    )}
+                    <small>{file.name}</small>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p>{files.length} new file(s) selected</p>
+          </div>
+          <button className="primary" disabled={isSubmitting}>
+            {isSubmitting
+              ? "Saving..."
+              : edit
+                ? "Save product"
+                : "Submit for review"}
+          </button>
+        </form>
+      </div>
+    </Layout>
+  );
+}
 
-function ProductDetail() { const { id } = useParams(); const [product, setProduct] = useState<any>(); const [media, setMedia] = useState<any[]>([]); const toast = useToast(); useEffect(() => { Promise.all([api.get(`/seller/products/${id}`), api.get(`/seller/products/${id}/media`)]).then(([productResponse, mediaResponse]) => { setProduct(productResponse.data.product); setMedia(mediaResponse.data.media || []); }).catch((error) => showError(toast, error, "Could not load product details.")); }, [id]); if (!product) return <Layout><p>Loading product...</p></Layout>; return <Layout><div className="form-wrap"><Link className="back-link" to="/seller/products">← Back to products</Link><div className="page-heading"><div><span className="eyebrow">PRODUCT DETAIL</span><h1>{product.title}</h1><p>{product.status} · Created {new Date(product.created_at).toLocaleDateString()}</p></div><Link className="primary" to={`/seller/products/${id}/edit`}>Edit product</Link></div><section className="form-section"><h2>Description</h2><p>{product.description}</p><p>Tags: {Array.isArray(product.tags) ? product.tags.join(", ") : product.tags}</p></section><section className="form-section"><h2>Media ({media.length})</h2><div className="preview-grid">{media.map((item) => item.resource_type === "video" ? <video key={item.id} src={item.url} controls /> : <img key={item.id} src={item.url} alt={product.title} />)}</div>{!media.length && <p>No media uploaded yet.</p>}</section></div></Layout>; }
+function ProductDetail() {
+  const { id } = useParams();
+  const [product, setProduct] = useState<any>();
+  const [media, setMedia] = useState<any[]>([]);
+  const toast = useToast();
+  useEffect(() => {
+    Promise.all([
+      api.get(`/seller/products/${id}`),
+      api.get(`/seller/products/${id}/media`),
+    ])
+      .then(([productResponse, mediaResponse]) => {
+        setProduct(productResponse.data.product);
+        setMedia(mediaResponse.data.media || []);
+      })
+      .catch((error) =>
+        showError(toast, error, "Could not load product details."),
+      );
+  }, [id]);
+  if (!product)
+    return (
+      <Layout>
+        <p>Loading product...</p>
+      </Layout>
+    );
+  return (
+    <Layout>
+      <div className="form-wrap">
+        <Link className="back-link" to="/seller/products">
+          ← Back to products
+        </Link>
+        <div className="page-heading">
+          <div>
+            <span className="eyebrow">PRODUCT DETAIL</span>
+            <h1>{product.title}</h1>
+            <p>
+              {product.status} · Created{" "}
+              {new Date(product.created_at).toLocaleDateString()}
+            </p>
+          </div>
+          <Link className="primary" to={`/seller/products/${id}/edit`}>
+            Edit product
+          </Link>
+        </div>
+        <section className="form-section">
+          <h2>Description</h2>
+          <p>{product.description}</p>
+          <p>
+            Tags:{" "}
+            {Array.isArray(product.tags)
+              ? product.tags.join(", ")
+              : product.tags}
+          </p>
+        </section>
+        <section className="form-section">
+          <h2>Media ({media.length})</h2>
+          <div className="preview-grid">
+            {media.map((item) =>
+              item.resource_type === "video" ? (
+                <video key={item.id} src={item.url} controls />
+              ) : (
+                <img key={item.id} src={item.url} alt={product.title} />
+              ),
+            )}
+          </div>
+          {!media.length && <p>No media uploaded yet.</p>}
+        </section>
+      </div>
+    </Layout>
+  );
+}
 
-const Guard = ({ children }: { children: ReactNode }) => authed() ? <>{children}</> : <Navigate to="/seller/login" replace />;
-export function SellerRoutes() { return <Routes><Route path="register" element={<Auth />} /><Route path="login" element={<Auth login />} /><Route path="dashboard" element={<Guard><Dashboard /></Guard>} /><Route path="shop" element={<Guard><Shop /></Guard>} /><Route path="coupons" element={<Guard><Coupons /></Guard>} /><Route path="products" element={<Guard><Products /></Guard>} /><Route path="products/new" element={<Guard><ProductForm /></Guard>} /><Route path="products/:id/edit" element={<Guard><ProductForm edit /></Guard>} /><Route path="products/:id" element={<Guard><ProductDetail /></Guard>} /><Route path="*" element={<Navigate to="dashboard" replace />} /></Routes>; }
+const Guard = ({ children }: { children: ReactNode }) =>
+  authed() ? <>{children}</> : <Navigate to="/seller/login" replace />;
+export function SellerRoutes() {
+  return (
+    <Routes>
+      <Route path="register" element={<Auth />} />
+      <Route path="login" element={<Auth login />} />
+      <Route
+        path="dashboard"
+        element={
+          <Guard>
+            <Dashboard />
+          </Guard>
+        }
+      />
+      <Route
+        path="shop"
+        element={
+          <Guard>
+            <Shop />
+          </Guard>
+        }
+      />
+      <Route
+        path="coupons"
+        element={
+          <Guard>
+            <Coupons />
+          </Guard>
+        }
+      />
+      <Route
+        path="products"
+        element={
+          <Guard>
+            <Products />
+          </Guard>
+        }
+      />
+      <Route
+        path="products/new"
+        element={
+          <Guard>
+            <ProductForm />
+          </Guard>
+        }
+      />
+      <Route
+        path="products/:id/edit"
+        element={
+          <Guard>
+            <ProductForm edit />
+          </Guard>
+        }
+      />
+      <Route
+        path="products/:id"
+        element={
+          <Guard>
+            <ProductDetail />
+          </Guard>
+        }
+      />
+      <Route path="*" element={<Navigate to="dashboard" replace />} />
+    </Routes>
+  );
+}

@@ -34,12 +34,13 @@ export const shopSchema = z.object({
   locationUrl: z.string().trim().url("Enter a valid Google Maps URL.").optional().or(z.literal("")),
 });
 export const productSchema = z.object({
-  title: z.string().trim().min(2).max(150),
-  description: z.string().trim().min(10),
+  title: z.string({ required_error: "Product title is required." }).trim().min(2, "Product title must be at least 2 characters.").max(150),
+  description: z.string({ required_error: "Product description is required." }).trim().min(10, "Description must be at least 10 characters."),
   basePrice: z.coerce.number().positive("Price must be greater than zero.").max(999999999).optional(),
+  discountPercent: z.coerce.number().min(0, "Discount cannot be negative.").max(100, "Discount cannot exceed 100%.").default(0),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
   seoTitle: z.string().max(70).optional().nullable(),
   seoDescription: z.string().max(170).optional().nullable(),
 });
 export const reviewSchema=z.object({name:z.string().trim().min(2,"Your name is required.").max(80),rating:z.number().int().min(1,"Choose a rating from 1 to 5.").max(5,"Choose a rating from 1 to 5."),comment:z.string().trim().min(5,"Please write at least 5 characters.").max(1000)});
-export const userAuthSchema = z.object({ email, password: z.string().min(8, "Use at least 8 characters.").max(72), fullName: z.string().trim().min(2).max(120).optional() });
+export const userAuthSchema = z.object({ email: email.optional(), mobileNumber: mobile.optional(), password: z.string().min(8, "Use at least 8 characters.").max(72), fullName: z.string().trim().min(2).max(120).optional() }).refine((value) => value.email || value.mobileNumber, { message: "Enter an email address or mobile number.", path: ["email"] });

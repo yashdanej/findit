@@ -1,0 +1,1 @@
+ALTER TABLE coupon_claims MODIFY expires_at TIMESTAMP NULL;

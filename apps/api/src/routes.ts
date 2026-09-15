@@ -27,22 +27,22 @@ import {
 } from "./services/ai-search.service.js";
 import { userAuthService } from "./services/user-auth.service.js";
 import { userAuthSchema } from "./validators/seller.js";
-import { claimCoupon, redeemCoupon, verifyCoupon } from "./services/coupon.service.js";
+import { claimCoupon, listSellerCoupons, listUserCoupons, redeemCoupon, verifyCoupon } from "./services/coupon.service.js";
 export const api = Router();
 api.post(
   "/user/auth/register",
   asyncHandler(async (req, res) => {
     const input = userAuthSchema.parse({
       ...req.body,
-      email: String(req.body.email || "")
-        .trim()
-        .toLowerCase(),
+      email: req.body.email ? String(req.body.email).trim().toLowerCase() : undefined,
+      mobileNumber: req.body.mobileNumber ? String(req.body.mobileNumber).replace(/\D/g, "") : undefined,
     });
     res
       .status(201)
       .json(
         await userAuthService.register(
           input.email,
+          input.mobileNumber,
           input.password,
           input.fullName,
         ),
@@ -52,13 +52,12 @@ api.post(
 api.post(
   "/user/auth/login",
   asyncHandler(async (req, res) => {
-    const input = userAuthSchema.pick({ email: true, password: true }).parse({
+    const input = userAuthSchema._def.schema.pick({ email: true, mobileNumber: true, password: true }).refine((value: { email?: string; mobileNumber?: string }) => value.email || value.mobileNumber, { message: "Enter an email address or mobile number.", path: ["email"] }).parse({
       ...req.body,
-      email: String(req.body.email || "")
-        .trim()
-        .toLowerCase(),
+      email: req.body.email ? String(req.body.email).trim().toLowerCase() : undefined,
+      mobileNumber: req.body.mobileNumber ? String(req.body.mobileNumber).replace(/\D/g, "") : undefined,
     });
-    res.json(await userAuthService.login(input.email, input.password));
+    res.json(await userAuthService.login(input.email || input.mobileNumber!, input.password));
   }),
 );
 api.get("/user/me", requireUser, asyncHandler(async (req, res) => {
@@ -80,9 +79,12 @@ api.patch("/user/me", requireUser, asyncHandler(async (req, res) => {
   await pool.query("UPDATE users SET full_name=?,mobile_number=? WHERE id=?", [fullName, mobileNumber, req.userId]);
   res.json({ success: true, data: (await pool.query("SELECT id,email,full_name,mobile_number FROM users WHERE id=?", [req.userId])).rows[0] });
 }));
+api.get("/user/coupons", requireUser, asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listUserCoupons(req.userId!) });
+}));
 api.get("/user/favorites", requireUser, asyncHandler(async (req, res) => {
   const { pool } = await import("./config/database.js");
-  const rows = (await pool.query("SELECT p.id,p.title,p.description,p.base_price,p.tags,s.id seller_id,s.shop_name,s.area,s.mobile_number,s.address_line,s.location_url,MIN(pm.url) image_url FROM user_favorites f JOIN products p ON p.id=f.product_id JOIN sellers s ON s.id=p.seller_id LEFT JOIN product_media pm ON pm.product_id=p.id WHERE f.user_id=? AND p.status='APPROVED' AND s.verification_status='VERIFIED' GROUP BY p.id,s.id ORDER BY f.created_at DESC", [req.userId])).rows;
+  const rows = (await pool.query("SELECT p.id,p.title,p.description,p.base_price,p.discount_percent,ROUND(p.base_price*(1-p.discount_percent/100),2) selling_price,p.tags,s.id seller_id,s.shop_name,s.area,s.mobile_number,s.address_line,s.location_url,MIN(pm.url) image_url FROM user_favorites f JOIN products p ON p.id=f.product_id JOIN sellers s ON s.id=p.seller_id LEFT JOIN product_media pm ON pm.product_id=p.id WHERE f.user_id=? AND p.status='APPROVED' AND s.verification_status='VERIFIED' GROUP BY p.id,s.id ORDER BY f.created_at DESC", [req.userId])).rows;
   res.json({ success: true, data: rows });
 }));
 api.post("/user/favorites/:productId", requireUser, asyncHandler(async (req, res) => {
@@ -103,14 +105,14 @@ api.get(
     const { pool } = await import("./config/database.js");
     const product = (
       await pool.query(
-        "SELECT p.id,p.title,p.description,p.base_price,p.tags,p.status,p.created_at,p.seller_id,s.shop_name,s.email,s.mobile_number,s.address_line,s.area,s.city,s.state,s.pincode,s.latitude,s.longitude,s.location_url,s.verification_status FROM products p JOIN sellers s ON s.id=p.seller_id WHERE p.id=? AND p.status='APPROVED' AND s.verification_status='VERIFIED'",
+        "SELECT p.id,p.title,p.description,p.base_price,p.discount_percent,ROUND(p.base_price*(1-p.discount_percent/100),2) selling_price,p.tags,p.status,p.created_at,p.seller_id,s.shop_name,s.email,s.mobile_number,s.address_line,s.area,s.city,s.state,s.pincode,s.location_url,s.verification_status FROM products p JOIN sellers s ON s.id=p.seller_id WHERE p.id=? AND p.status='APPROVED' AND s.verification_status='VERIFIED'",
         [req.params.id],
       )
     ).rows[0];
     if (!product)
       throw new HttpError(404, "Product not found.", "PRODUCT_NOT_FOUND");
     const media = await productMediaRepository.list(req.params.id);
-    res.json({ success: true, data: { product, media } });
+    res.json({ success: true, data: { product, media, sellerMedia: await sellerMediaRepository.list(product.seller_id) } });
   }),
 );
 api.get(
@@ -126,7 +128,7 @@ api.get(
     if (!shop) throw new HttpError(404, "Shop not found.", "SHOP_NOT_FOUND");
     const products = (
       await pool.query(
-        "SELECT p.id,p.title,p.description,p.base_price,p.tags,MIN(pm.url) image_url FROM products p LEFT JOIN product_media pm ON pm.product_id=p.id WHERE p.seller_id=? AND p.status='APPROVED' GROUP BY p.id ORDER BY p.created_at DESC",
+        "SELECT p.id,p.title,p.description,p.base_price,p.discount_percent,ROUND(p.base_price*(1-p.discount_percent/100),2) selling_price,p.tags,MIN(pm.url) image_url FROM products p LEFT JOIN product_media pm ON pm.product_id=p.id WHERE p.seller_id=? AND p.status='APPROVED' GROUP BY p.id ORDER BY p.created_at DESC",
         [req.params.id],
       )
     ).rows;
@@ -155,6 +157,9 @@ api.post("/seller/coupons/redeem", requireSeller, asyncHandler(async (req, res) 
   const coupon = String(req.body.coupon || "").trim();
   if (!coupon) throw new HttpError(422, "Enter a coupon code.", "COUPON_REQUIRED");
   res.json(await redeemCoupon(coupon, req.sellerId!));
+}));
+api.get("/seller/coupons", requireSeller, asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listSellerCoupons(req.sellerId!) });
 }));
 api.get(
   "/public/products/:id/reviews",
@@ -187,7 +192,7 @@ api.get(
     );
     const rows = (
       await pool.query(
-        `SELECT p.id,p.title,p.description,p.tags,s.id seller_id,s.shop_name,s.area,s.mobile_number,s.address_line,s.location_url,MIN(pm.url) image_url FROM products p JOIN sellers s ON s.id=p.seller_id LEFT JOIN product_media pm ON pm.product_id=p.id WHERE ${where} GROUP BY p.id,s.id ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+        `SELECT p.id,p.title,p.description,p.tags,p.base_price,p.discount_percent,ROUND(p.base_price*(1-p.discount_percent/100),2) selling_price,s.id seller_id,s.shop_name,s.area,s.mobile_number,s.address_line,s.location_url,MIN(pm.url) image_url FROM products p JOIN sellers s ON s.id=p.seller_id LEFT JOIN product_media pm ON pm.product_id=p.id WHERE ${where} GROUP BY p.id,s.id ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
         [...values, limit, (page - 1) * limit],
       )
     ).rows;
@@ -251,7 +256,7 @@ api.post(
     const placeholders = ids.map(() => "?").join(",");
     const products = (
       await pool.query(
-        `SELECT p.id,p.title,p.description,p.tags,p.base_price,s.id seller_id,s.shop_name,s.mobile_number,s.area,s.address_line,MIN(pm.url) image_url FROM products p JOIN sellers s ON s.id=p.seller_id LEFT JOIN product_media pm ON pm.product_id=p.id WHERE p.id IN (${placeholders}) AND p.status='APPROVED' AND s.verification_status='VERIFIED' GROUP BY p.id,s.id`,
+        `SELECT p.id,p.title,p.description,p.tags,p.base_price,p.discount_percent,ROUND(p.base_price*(1-p.discount_percent/100),2) selling_price,s.id seller_id,s.shop_name,s.mobile_number,s.area,s.address_line,MIN(pm.url) image_url FROM products p JOIN sellers s ON s.id=p.seller_id LEFT JOIN product_media pm ON pm.product_id=p.id WHERE p.id IN (${placeholders}) AND p.status='APPROVED' AND s.verification_status='VERIFIED' GROUP BY p.id,s.id`,
         ids,
       )
     ).rows;
